@@ -1,0 +1,147 @@
+
+<TooltipMDIconButton@MDIconButton+MDTooltip>
+
+<SettingsGrid>:
+    orientation: 'horizontal'
+    size_hint: (1, None)
+    size_hint_max_y: 100
+    TooltipMDIconButton:
+        id: refresh_button
+        icon: 'refresh'
+        text: 'Refresh'
+        tooltip_text: 'Refresh Camera System'
+        pos_hint: {"center_y":0.5}
+        size_hint_x: 0.5
+        size_hint_min_x: '50dp'
+    MDGridLayout:
+        cols: 4
+        size_hint_x: 9
+        spacing: [20, 10]
+        MDLabel:
+            text: 'Exposure (ms)'
+            halign: 'center'
+            theme_text_color: 'Secondary' if app.theme_cls.theme_style == 'Dark' else 'Primary'
+            size_hint_x: 1
+            size_hint_min_x: '125dp'
+        MDSlider:
+            id: exposure_slider
+            min: 10
+            max: 1000
+            step: 5
+            value: 100
+            on_active: app.main_exposure_time = self.value * 1000
+            size_hint_x: 2
+            size_hint_min_x: '150dp'
+        MDTextField:
+            id: save_dir_input
+            input_type: 'text'
+            multiline: False
+            hint_text: "Paste a folder path to save files under"
+            helper_text_mode: "on_error"
+            size_hint_x: 9
+            size_hint_min_x: '300dp'
+            required: True
+        TooltipMDIconButton:
+            id: take_picture_button
+            icon: 'camera'
+            tooltip_text: 'Capture Images'
+            pos_hint: {"center_y":0.5}
+            size_hint: 0.5, 0.5
+            size_hint_min_x: '50dp'
+            on_release: root.snap_picture(app)
+        MDLabel:
+            id: fps_label
+            text: 'FPS ' + str(app.main_fps)
+            halign: 'center'
+            size_hint_x: 1
+            size_hint_x_max: '100dp'
+        MDSlider:
+            id: fps_slider
+            min: 1.5
+            max: 19.0
+            step: 0.25
+            value: app.main_fps
+            on_active: app.main_fps = self.value
+            size_hint_x: 2
+            size_hint_min_x: '150dp'
+        MDTextField:
+            id: project_name_input
+            input_type: 'text'
+            multiline: False
+            size_hint_x: 4
+            size_hint_min_x: '300dp'
+            helper_text: 'Project Name (Prefix in DICe)'
+            helper_text_mode: 'on_focus'
+            text: app.project_name
+            on_text: app.project_name = self.text
+        TooltipMDIconButton:
+            id: 'record_button'
+            icon: 'video'
+            tooltip_text: 'Record Stream'
+            pos_hint: {"center_y":0.5}
+            size_hint: 0.5, 0.5
+            size_hint_min_x: '50dp'
+
+
+<FLIRImage>:
+    canvas:
+        Color:
+            rgb: (1, 1, 1)
+        Rectangle:
+            id: image_canvas
+            texture: self.texture
+            size: self.size
+            pos: self.pos
+
+<FLIRCamera>:
+    padding: 10
+    orientation: 'vertical'
+    MDBoxLayout:
+        size_hint_y: 9
+        FLIRImage:
+            id: image_view
+    MDGridLayout:
+        rows: 1
+        MDBoxLayout:
+            size_hint_x: 1
+            spacing: 10
+            MDLabel:
+                text: 'Gain ' + str(root.gain)
+                size_hint_x: None
+                size_hint_x_min: '100dp'
+#                size_hint_x_max: '150dp'
+                halign: 'center'
+                theme_text_color: 'Primary' if app.theme_cls =='Dark' else 'Secondary'
+            MDSlider:
+                id: gain_slider
+                min: 0.0
+                max: 27
+                value: 1.0
+                step: 0.25
+                on_active: root.gain = self.value
+                size_hint_x_min: '100dp'
+#                on_touch_up: print(f'Up {self.value}')
+        MDBoxLayout:
+            MDLabel:
+                text: 'Show Stream'
+                size_hint_x_min: '100dp'
+                size_hint_x_max: '150dp'
+                halign: 'center'
+                theme_text_color: 'Primary' if app.theme_cls =='Dark' else 'Secondary'
+            MDSwitch:
+                id: stream_switch
+                on_active: root.acquiring = self.active
+                size_hint_x_max: '48dp'
+
+
+MDBoxLayout:
+    orientation: 'vertical'
+    padding: 20
+    spacing: 20
+    SettingsGrid:
+        id: settings_grid
+    MDBoxLayout:
+        id: camera_box
+        size_hint_min_y: 400
+
+
