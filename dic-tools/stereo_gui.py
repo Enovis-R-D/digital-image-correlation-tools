@@ -4,8 +4,6 @@ os.environ['KIVY_NO_ARGS'] = '1'
 import sys
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.gridlayout import MDGridLayout
-from kivymd.uix.menu import MDDropdownMenu
 import acquistion as cam_aq
 from pathlib import Path
 from kivy.lang import Builder
@@ -17,23 +15,25 @@ from kivy.graphics.texture import Texture
 from kivy.uix.image import Image
 from kivy.properties import BoundedNumericProperty, ReferenceListProperty, BooleanProperty, NumericProperty, \
     StringProperty
+from kivy.core.window import Window
 from loguru import logger
 
+Window.minimum_width = '725dp'
+Window.minimum_height = '550dp'
 
-# todo wire in take picture and record stream and refresh system
+
 class FLIRImage(Image):
     pass
 
 
-# inspiration: https://imgur.com/a3IcAZN
-
-# main page
+# main page inspiration: https://imgur.com/a3IcAZN
 class FLIRCamera(MDBoxLayout):
     acquiring = BooleanProperty(False)
     gain = BoundedNumericProperty(5, min=0, max=27)
     exposure_time = NumericProperty()
     fps = NumericProperty()
     cam_settings = ReferenceListProperty(acquiring, gain, exposure_time, fps)
+    image_id = NumericProperty(0)
 
     def __init__(self, camera, **kwargs):
         super(FLIRCamera, self).__init__(**kwargs)
@@ -63,7 +63,7 @@ class FLIRCamera(MDBoxLayout):
         self.hardware_cam.AcquisitionFrameRate.SetValue(value)
         logger.debug(f'Frame rate set to {value}')
 
-    def configure_camera(self, fps, exposure_time, acquisition_mode='Continuous', buffer_mode='NewestOnly'):
+    async def configure_camera(self, fps, exposure_time, acquisition_mode='Continuous', buffer_mode='NewestOnly'):
 
         # Set acquisition mode to continuous
         if self.serial_number is None:
@@ -119,7 +119,7 @@ class FLIRCamera(MDBoxLayout):
         self.hardware_cam.fps = fps
         # cam_aq.configure_trigger(self.hardware_cam)
 
-    def get_next_image(self, app, save_image=False, update_view=True):
+    async def get_next_image(self, app, save_image=False, update_view=True, stop_stream=False):
         # trigger?
         logger.debug(f'{self.serial_number} Acquiring')
         image_result = self.hardware_cam.GetNextImage()
@@ -133,7 +133,6 @@ class FLIRCamera(MDBoxLayout):
             if update_view:
                 image_arr = image_result.GetNDArray()
                 logger.debug(f'{self.serial_number} Array Gotten')
-                # print(image_arr.shape, image_arr.dtype, image_arr[0][0])
                 arr = np.copy(np.flipud(image_arr)).tobytes()
                 image_texture = Texture.create(size=(width, height), colorfmt='luminance')
                 image_texture.blit_buffer(arr, colorfmt='luminance')
@@ -141,15 +140,20 @@ class FLIRCamera(MDBoxLayout):
                 image_view = self.ids['image_view']
                 image_view.texture = image_texture
                 logger.debug(f'{self.serial_number} Texture assigned')
-            if save_image:
-                with cam_aq.working_directory(app.screen.ids['settings_grid'].ids['save_dir_input'].text):
-                    image_converted = image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR)
-                    image_id_str = f'{"0" * (3 - len(str(app.image_id)))}{app.image_id}'
-                    filename = f'{app.project_name}_{image_id_str}_S#{self.serial_number}.jpg'
-                    # Save image
-                    image_converted.Save(filename)
-                    logger.info('Image saved at %s' % filename)
-                self.ids['stream_switch'].active = False  # ends streaming to display captured image
+            if save_image or app.record_stream:
+                ak.start(self.save_image(app, image_result))
+                self.image_id += 1
+            if stop_stream:
+                self.ids['stream_switch'].active = False
+
+    async def save_image(self, app, image_result):
+        with cam_aq.working_directory(app.screen.ids['settings_grid'].ids['save_dir_input'].text):
+            image_converted = image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR)
+            image_id_str = f'{"0" * (3 - len(str(self.image_id)))}{self.image_id}'
+            filename = f'{app.project_name}_{image_id_str}_S#{self.serial_number}.jpg'
+            # Save image
+            image_converted.Save(filename)
+            logger.debug('Image saved at %s' % filename)
 
 
 class SettingsGrid(MDBoxLayout):
@@ -159,16 +163,34 @@ class SettingsGrid(MDBoxLayout):
         super(SettingsGrid, self).__init__(**kwargs)
 
     def snap_picture(self, app):
-        # todo save current images (one shot).
+        # save current images (one shot).
         directory = Path(self.ids['save_dir_input'].text)
-        if directory.is_dir() is True and str(directory) is not '.':
+        if directory.is_dir() is True and str(directory) != '.':
             for cam in app.cam_list:
                 # stop streaming on all cameras
                 if cam.acquiring is False:
                     cam.ids['stream_switch'].active = True
                 # take picture with all cameras
-                cam.get_next_image(app, save_image=True)
-                app.image_id += 1
+                ak.start(cam.get_next_image(app, save_image=True, stop_stream=True))
+            # app.image_id += 1
+        else:
+            self.ids['save_dir_input'].focus = True
+            self.ids['save_dir_input'].focus = False
+
+    def record_stream(self, record_button, app):
+        directory = Path(self.ids['save_dir_input'].text)
+        if directory.is_dir() is True and str(directory) != '.':
+            if app.record_stream is False:  # start recording
+                record_button.md_bg_color = app.theme_cls.error_color
+                record_button.tooltip_text = 'Recording'
+                app.record_stream = True
+                for cam in app.cam_list:  # start stream if not already streaming
+                    if cam.acquiring is False:
+                        cam.ids['stream_switch'].active = True
+            else:  # stop recording
+                record_button.md_bg_color = app.theme_cls.primary_color
+                record_button.tooltip_text = 'Record Stream'
+                app.record_stream = False
         else:
             self.ids['save_dir_input'].focus = True
             self.ids['save_dir_input'].focus = False
@@ -178,31 +200,21 @@ class StereoCamerasApp(MDApp):
     # camera settings are linked to app level properties
     main_exposure_time = BoundedNumericProperty(100, min=100, max=1000000)  # units are microseconds
     main_fps = BoundedNumericProperty(16.5, min=1.33, max=19)
-    image_id = NumericProperty(0)
     project_name = StringProperty('DIC Project')
+    record_stream = BooleanProperty(False)
 
     def __init__(self, **kwargs):
         super(StereoCamerasApp, self).__init__(**kwargs)
-        ak.start(self.connect_flir_system())
         print(self.built)
 
     def build(self):
         # async_loop = asyncio.get_event_loop()
         # main(async_loop)
         self.theme_cls.theme_style = 'Light'
-        self.theme_cls.primary_palette = 'Red'
+        self.theme_cls.primary_palette = 'BlueGray'
         self.screen = Builder.load_file('StereoGUI.kv')
         self.camera_box = self.screen.ids['camera_box']
-        cameras = self.system.GetCameras()
-        self.cam_list = [FLIRCamera(cam) for cam in cameras]
-        cameras.Clear()
-        for cam in self.cam_list:
-            self.camera_box.add_widget(cam)
-            cam.hardware_cam.Init()
-            cam.configure_camera(self.main_fps,
-                                 self.main_exposure_time)
-            # set trigger to software trigger
-            # cam_aq.configure_trigger(cam)
+        ak.start(self.connect_flir_system())
         return self.screen
 
     def on_start(self):
@@ -224,33 +236,31 @@ class StereoCamerasApp(MDApp):
         if connect:
             self.system = PySpin.System.GetInstance()
             # Retrieve list of cameras from the system
+            cameras = self.system.GetCameras()
+            self.cam_list = [FLIRCamera(cam) for cam in cameras]
+            cameras.Clear()
+            for cam in self.cam_list:
+                self.camera_box.add_widget(cam)
+                cam.hardware_cam.Init()
+                ak.start(cam.configure_camera(self.main_fps, self.main_exposure_time))
         else:
             for camera in self.cam_list:
                 # camera.hardware_cam.DeInit()
                 # todo restore default settings
                 del camera.hardware_cam  # clears reference to camera
+            self.cam_list.clear()
+            self.camera_box.clear_widgets()  # removes created image views
             self.system.ReleaseInstance()
+            del self.system
 
     def run_cameras(self, dt):
         for cam in self.cam_list:
             if cam.acquiring:
-                cam.get_next_image(self, update_view=True)
-                # logger.debug(f'{cam.serial_number} Acquiring')
-                # image_result = cam.hardware_cam.GetNextImage()
-                # logger.debug('Image Result Grabbed')
-                # if not image_result.IsIncomplete():
-                #     cam.image = image_result
-                #     width = image_result.GetWidth()
-                #     height = image_result.GetHeight()
-                #     image_arr = image_result.GetNDArray()
-                #     logger.debug(f'{cam.serial_number} Array Gotten')
-                #     arr = np.copy(np.flipud(image_arr)).tobytes()
-                #     image_texture = Texture.create(size=(width, height), colorfmt='luminance')
-                #     image_texture.blit_buffer(arr, colorfmt='luminance')
-                #     logger.debug(f'{cam.serial_number} Texture blitted')
-                #     image_view = cam.ids['image_view']
-                #     image_view.texture = image_texture
-                #     logger.debug(f'{cam.serial_number} Texture assigned')
+                ak.start(cam.get_next_image(self, update_view=True))
+
+    def reset_camera_system(self):
+        ak.start(self.connect_flir_system(connect=False))
+        ak.start(self.connect_flir_system())
 
 
 if __name__ == '__main__':

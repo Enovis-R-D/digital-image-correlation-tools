@@ -1,5 +1,8 @@
+#:import ToggleButtonBehavior kivy.uix.behaviors.ToggleButtonBehavior
 
-<TooltipMDIconButton@MDIconButton+MDTooltip>
+<TooltipMDIconButton@MDFillRoundFlatIconButton+MDTooltip>
+
+<ToggleTooltipMDIconButton@TooltipMDIconButton+ToggleButtonBehavior>
 
 <SettingsGrid>:
     orientation: 'horizontal'
@@ -8,11 +11,11 @@
     TooltipMDIconButton:
         id: refresh_button
         icon: 'refresh'
-        text: 'Refresh'
         tooltip_text: 'Refresh Camera System'
         pos_hint: {"center_y":0.5}
-        size_hint_x: 0.5
+        size_hint: 0.5, 0.5
         size_hint_min_x: '50dp'
+        on_release: app.reset_camera_system()
     MDGridLayout:
         cols: 4
         size_hint_x: 9
@@ -20,9 +23,10 @@
         MDLabel:
             text: 'Exposure (ms)'
             halign: 'center'
-            theme_text_color: 'Secondary' if app.theme_cls.theme_style == 'Dark' else 'Primary'
-            size_hint_x: 1
-            size_hint_min_x: '125dp'
+            theme_text_color: 'Secondary' if app.theme_cls =='Dark' else 'Primary'
+            size_hint_x: 0.75
+            size_hint_min_x: '110dp'
+            size_hint_max_x: '125dp'
         MDSlider:
             id: exposure_slider
             min: 10
@@ -38,8 +42,8 @@
             multiline: False
             hint_text: "Paste a folder path to save files under"
             helper_text_mode: "on_error"
-            size_hint_x: 9
-            size_hint_min_x: '300dp'
+            size_hint_x: 8
+            size_hint_min_x: '275dp'
             required: True
         TooltipMDIconButton:
             id: take_picture_button
@@ -55,6 +59,7 @@
             halign: 'center'
             size_hint_x: 1
             size_hint_x_max: '100dp'
+            theme_text_color: 'Secondary' if app.theme_cls =='Dark' else 'Primary'
         MDSlider:
             id: fps_slider
             min: 1.5
@@ -68,25 +73,26 @@
             id: project_name_input
             input_type: 'text'
             multiline: False
-            size_hint_x: 4
-            size_hint_min_x: '300dp'
+            size_hint_x: 8
+            size_hint_min_x: '275dp'
             helper_text: 'Project Name (Prefix in DICe)'
             helper_text_mode: 'on_focus'
             text: app.project_name
             on_text: app.project_name = self.text
         TooltipMDIconButton:
-            id: 'record_button'
+            id: record_button
             icon: 'video'
             tooltip_text: 'Record Stream'
             pos_hint: {"center_y":0.5}
             size_hint: 0.5, 0.5
             size_hint_min_x: '50dp'
+            on_release: root.record_stream(self, app)
 
 
 <FLIRImage>:
     canvas:
         Color:
-            rgb: (1, 1, 1)
+            rgba: [1, 1, 1, 1]
         Rectangle:
             id: image_canvas
             texture: self.texture
@@ -111,7 +117,7 @@
                 size_hint_x_min: '100dp'
 #                size_hint_x_max: '150dp'
                 halign: 'center'
-                theme_text_color: 'Primary' if app.theme_cls =='Dark' else 'Secondary'
+                theme_text_color: 'Secondary' if app.theme_cls =='Dark' else 'Primary'
             MDSlider:
                 id: gain_slider
                 min: 0.0
@@ -127,7 +133,7 @@
                 size_hint_x_min: '100dp'
                 size_hint_x_max: '150dp'
                 halign: 'center'
-                theme_text_color: 'Primary' if app.theme_cls =='Dark' else 'Secondary'
+                theme_text_color: 'Secondary' if app.theme_cls =='Dark' else 'Primary'
             MDSwitch:
                 id: stream_switch
                 on_active: root.acquiring = self.active
