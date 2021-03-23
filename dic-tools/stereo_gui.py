@@ -164,7 +164,7 @@ class SettingsGrid(MDBoxLayout):
 
     def snap_picture(self, app):
         # save current images (one shot).
-        directory = Path(self.ids['save_dir_input'].text)
+        directory = Path(self.ids['save_dir_input'].text.strip('"'))
         if directory.is_dir() is True and str(directory) != '.':
             for cam in app.cam_list:
                 # stop streaming on all cameras
