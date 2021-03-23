@@ -119,7 +119,8 @@ class FLIRCamera(MDBoxLayout):
         self.hardware_cam.fps = fps
         # cam_aq.configure_trigger(self.hardware_cam)
 
-    async def get_next_image(self, app, save_image=False, update_view=True, stop_stream=False):
+    # async def get_next_image(self, app, save_image=False, update_view=True, stop_stream=False):
+    def get_next_image(self, app, save_image=False, update_view=True, stop_stream=False):
         # trigger?
         logger.debug(f'{self.serial_number} Acquiring')
         image_result = self.hardware_cam.GetNextImage()
@@ -171,7 +172,8 @@ class SettingsGrid(MDBoxLayout):
                 if cam.acquiring is False:
                     cam.ids['stream_switch'].active = True
                 # take picture with all cameras
-                ak.start(cam.get_next_image(app, save_image=True, stop_stream=True))
+                # ak.start(cam.get_next_image(app, save_image=True, stop_stream=True))
+                cam.get_next_image(app, save_image=True, stop_stream=True)
             # app.image_id += 1
         else:
             self.ids['save_dir_input'].focus = True
@@ -256,7 +258,8 @@ class StereoCamerasApp(MDApp):
     def run_cameras(self, dt):
         for cam in self.cam_list:
             if cam.acquiring:
-                ak.start(cam.get_next_image(self, update_view=True))
+                # ak.start(cam.get_next_image(self, update_view=True))
+                cam.get_next_image(self, update_view=True)
 
     def reset_camera_system(self):
         ak.start(self.connect_flir_system(connect=False))
