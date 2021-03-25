@@ -4,7 +4,7 @@ os.environ['KIVY_NO_ARGS'] = '1'
 import sys
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.uix.scatterlayout import ScatterLayout
+from kivy.uix.scatterlayout import Scatter
 import acquistion as cam_aq
 from pathlib import Path
 from kivy.lang import Builder
@@ -23,13 +23,12 @@ Window.minimum_width = '725dp'
 Window.minimum_height = '550dp'
 
 
-class ResizableDraggablePicture(ScatterLayout):
+class ResizableDraggablePicture(Scatter):
     def on_touch_down(self, touch):
         # Override Scatter's `on_touch_down` behavior for mouse scroll
         if touch.is_mouse_scrolling:
             if touch.button == 'scrolldown':
-                if self.scale < 10:
-                    self.scale = self.scale * 1.1
+                self.scale = self.scale * 1.1
             elif touch.button == 'scrollup':
                 if self.scale > 1:
                     self.scale = self.scale * 0.8
@@ -40,7 +39,6 @@ class ResizableDraggablePicture(ScatterLayout):
 
 class FLIRImage(Image):
     pass
-
 
 # main page inspiration: https://imgur.com/a3IcAZN
 class FLIRCamera(MDBoxLayout):

@@ -99,15 +99,21 @@
             size: self.size
             pos: self.pos
 
+<ResizableDraggablePicture>:
+    do_rotation: False
+    auto_bring_to_front: True
+    scale_min: 0.5
+
 <FLIRCamera>:
     padding: 10
     orientation: 'vertical'
-    ResizableDraggablePicture:
+    MDBoxLayout:
         size_hint_y: 9
-        FLIRImage:
-            id: image_view
-            allow_stretch: True
-            keep_ratio: True
+        ResizableDraggablePicture:
+            FLIRImage:
+                id: image_view
+                allow_stretch: True
+                keep_ratio: True
     MDGridLayout:
         rows: 1
         MDBoxLayout:
