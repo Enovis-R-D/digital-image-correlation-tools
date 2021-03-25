@@ -5,6 +5,7 @@ import sys
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.scatterlayout import ScatterLayout
+from kivy.graphics.transformation import Matrix
 import acquistion as cam_aq
 from pathlib import Path
 from kivy.lang import Builder
@@ -18,6 +19,7 @@ from kivy.properties import BoundedNumericProperty, ReferenceListProperty, Boole
     StringProperty
 from kivy.core.window import Window
 from loguru import logger
+import plyer
 
 Window.minimum_width = '725dp'
 Window.minimum_height = '550dp'
@@ -28,13 +30,19 @@ class ResizableDraggablePicture(ScatterLayout):
         # Override Scatter's `on_touch_down` behavior for mouse scroll
         if touch.is_mouse_scrolling:
             if touch.button == 'scrolldown':
-                self.scale = self.scale * 1.1
+                mat = Matrix().scale(1.1, 1.1, 1.1)
+                self.apply_transform(mat, anchor=touch.pos)
+                # self.scale = self.scale * 1.1
+                return True
             elif touch.button == 'scrollup':
                 if self.scale > 1:
-                    self.scale = self.scale * 0.8
+                    mat = Matrix().scale(0.9, 0.9, 0.9)
+                    self.apply_transform(mat, anchor=touch.pos)
+                return True
         # If some other kind of "touch": Fall back on Scatter's behavior
         else:
             super(ResizableDraggablePicture, self).on_touch_down(touch)
+            return False
 
 
 class FLIRImage(Image):
@@ -191,6 +199,12 @@ class SettingsGrid(MDBoxLayout):
             self.ids['save_dir_input'].focus = True
             self.ids['save_dir_input'].focus = False
 
+    def browse_for_save_folder(self, app):
+        selection = plyer.filechooser.choose_dir()
+        print(selection)
+        if len(selection) == 1:
+            self.ids.save_dir_input.text = selection[0]
+
     def record_stream(self, record_button, app):
         directory = Path(self.ids['save_dir_input'].text)
         if directory.is_dir() is True and str(directory) != '.':
@@ -219,7 +233,7 @@ class StereoCamerasApp(MDApp):
 
     def __init__(self, **kwargs):
         super(StereoCamerasApp, self).__init__(**kwargs)
-        print(self.built)
+        # print(self.built)
 
     def build(self):
         # async_loop = asyncio.get_event_loop()

@@ -17,7 +17,8 @@
         size_hint_min_x: '50dp'
         on_release: app.reset_camera_system()
     MDGridLayout:
-        cols: 4
+        cols: 5
+        rows: 2
         size_hint_x: 9
         spacing: [20, 10]
         MDLabel:
@@ -43,8 +44,16 @@
             hint_text: "Paste a folder path to save files under"
             helper_text_mode: "on_error"
             size_hint_x: 8
-            size_hint_min_x: '275dp'
+            size_hint_min_x: '225dp'
             required: True
+        TooltipMDIconButton:
+            id: open_file_dir_button
+            icon: 'folder-open'
+            tooltip_text: 'Browse for Save Directory'
+            pos_hint: {"center_y":0.5}
+            size_hint: 0.5, 0.5
+            size_hint_max_x: '50dp'
+            on_release: root.browse_for_save_folder(app)
         TooltipMDIconButton:
             id: take_picture_button
             icon: 'camera'
@@ -79,6 +88,10 @@
             helper_text_mode: 'on_focus'
             text: app.project_name
             on_text: app.project_name = self.text
+        MDLabel:
+            pos_hint: {"center_y":0.5}
+            size_hint: 0.5, 0.5
+            size_hint_min_x: '50dp'
         TooltipMDIconButton:
             id: record_button
             icon: 'video'
@@ -101,7 +114,6 @@
 
 <ResizableDraggablePicture>:
     do_rotation: False
-    auto_bring_to_front: True
     scale_min: 1.0
 
 <FLIRCamera>:
