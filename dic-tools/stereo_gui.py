@@ -195,9 +195,11 @@ class SettingsGrid(MDBoxLayout):
                 # take picture with all cameras
                 ak.start(cam.get_next_image(app, save_image=True, stop_stream=True))
             # app.image_id += 1
+            plyer.notification.notify(title='Stereo Cameras', message=f'{len(app.cam_list)} Captured Images displayed')
         else:
             self.ids['save_dir_input'].focus = True
             self.ids['save_dir_input'].focus = False
+            plyer.notification.notify(title='Stereo Cameras', message=f'A file path is required')
 
     def browse_for_save_folder(self, app):
         selection = plyer.filechooser.choose_dir()
