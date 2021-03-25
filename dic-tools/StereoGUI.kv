@@ -102,10 +102,12 @@
 <FLIRCamera>:
     padding: 10
     orientation: 'vertical'
-    MDBoxLayout:
+    ResizableDraggablePicture:
         size_hint_y: 9
         FLIRImage:
             id: image_view
+            allow_stretch: True
+            keep_ratio: True
     MDGridLayout:
         rows: 1
         MDBoxLayout:

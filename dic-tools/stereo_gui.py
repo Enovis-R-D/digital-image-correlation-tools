@@ -4,6 +4,7 @@ os.environ['KIVY_NO_ARGS'] = '1'
 import sys
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.uix.scatterlayout import ScatterLayout
 import acquistion as cam_aq
 from pathlib import Path
 from kivy.lang import Builder
@@ -20,6 +21,21 @@ from loguru import logger
 
 Window.minimum_width = '725dp'
 Window.minimum_height = '550dp'
+
+
+class ResizableDraggablePicture(ScatterLayout):
+    def on_touch_down(self, touch):
+        # Override Scatter's `on_touch_down` behavior for mouse scroll
+        if touch.is_mouse_scrolling:
+            if touch.button == 'scrolldown':
+                if self.scale < 10:
+                    self.scale = self.scale * 1.1
+            elif touch.button == 'scrollup':
+                if self.scale > 1:
+                    self.scale = self.scale * 0.8
+        # If some other kind of "touch": Fall back on Scatter's behavior
+        else:
+            super(ResizableDraggablePicture, self).on_touch_down(touch)
 
 
 class FLIRImage(Image):
@@ -164,7 +180,7 @@ class SettingsGrid(MDBoxLayout):
 
     def snap_picture(self, app):
         # save current images (one shot).
-        directory = Path(self.ids['save_dir_input'].text.strip('"'))
+        directory = Path(self.ids['save_dir_input'].text)
         if directory.is_dir() is True and str(directory) != '.':
             for cam in app.cam_list:
                 # stop streaming on all cameras
