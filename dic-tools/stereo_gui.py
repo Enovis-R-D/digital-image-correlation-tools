@@ -4,7 +4,7 @@ os.environ['KIVY_NO_ARGS'] = '1'
 import sys
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.uix.scatterlayout import Scatter
+from kivy.uix.scatterlayout import ScatterLayout
 import acquistion as cam_aq
 from pathlib import Path
 from kivy.lang import Builder
@@ -23,7 +23,7 @@ Window.minimum_width = '725dp'
 Window.minimum_height = '550dp'
 
 
-class ResizableDraggablePicture(Scatter):
+class ResizableDraggablePicture(ScatterLayout):
     def on_touch_down(self, touch):
         # Override Scatter's `on_touch_down` behavior for mouse scroll
         if touch.is_mouse_scrolling:
