@@ -1,0 +1,15 @@
+name: dic-tools
+channels:
+  - conda-forge
+  - anaconda
+  - entpyle
+  - tcoutinho
+  - defaults
+dependencies:
+  - python=3.8
+  - numpy
+  - pip:
+      - kivymd>=0.104
+      - kivy>=2
+      - spinnaker-python>=2
+      - plyer
