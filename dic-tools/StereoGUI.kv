@@ -113,8 +113,7 @@
             pos: self.pos
 
 <ResizableDraggablePicture>:
-    do_rotation: False
-    scale_min: 1.0
+    init_size: root.size
 
 <FLIRCamera>:
     padding: 10
@@ -122,6 +121,10 @@
     MDBoxLayout:
         size_hint_y: 9
         ResizableDraggablePicture:
+            do_rotation: False
+            scale_min: 1.0
+            auto_bring_to_front: False
+            init_pos: self.parent.center
             FLIRImage:
                 id: image_view
                 allow_stretch: True
