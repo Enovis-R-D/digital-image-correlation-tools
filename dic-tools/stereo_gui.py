@@ -26,23 +26,38 @@ Window.minimum_height = '550dp'
 
 
 class ResizableDraggablePicture(ScatterLayout):
+
     def on_touch_down(self, touch):
         # Override Scatter's `on_touch_down` behavior for mouse scroll
+        # if the touch isnt on the widget we do nothing
+        if not self.do_collide_after_children:
+            if not self.collide_point(touch.x, touch.y):
+                return False
         if touch.is_mouse_scrolling:
+            init_pos = self.center
+            init_scale = self.scale
             if touch.button == 'scrolldown':
+                # self.zoom_scale *= 1.1
                 mat = Matrix().scale(1.1, 1.1, 1.1)
                 self.apply_transform(mat, anchor=touch.pos)
                 # self.scale = self.scale * 1.1
-                return True
+                # return True
             elif touch.button == 'scrollup':
-                if self.scale > 1:
-                    mat = Matrix().scale(0.9, 0.9, 0.9)
-                    self.apply_transform(mat, anchor=touch.pos)
-                return True
+                # self.zoom_scale *= 0.8
+                mat = Matrix().scale(0.8, 0.8, 0.8)
+                self.apply_transform(mat, anchor=touch.pos)
+                # return True
+        elif touch.is_double_tap:
+            print('Double')
+            self.reset()
         # If some other kind of "touch": Fall back on Scatter's behavior
         else:
             super(ResizableDraggablePicture, self).on_touch_down(touch)
             return False
+
+    def reset(self):
+        self.center = self.init_pos
+        self.scale = 1
 
 
 class FLIRImage(Image):
