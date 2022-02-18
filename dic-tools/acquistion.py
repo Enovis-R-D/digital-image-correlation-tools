@@ -23,7 +23,6 @@
 # except that loops are used to allow for simultaneous acquisitions.
 
 import os
-
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import PySpin
 import sys
@@ -33,10 +32,6 @@ import contextlib
 from pathlib import Path
 from loguru import logger
 from collections import namedtuple
-
-trigger_type = namedtuple('Triggers', 'software hardware')
-triggers = trigger_type(1, 2)
-selected_trigger = triggers.software
 
 
 def configure_trigger(cam):
@@ -218,11 +213,36 @@ def working_directory(path):
         os.chdir(prev_cwd)
 
 
-# this script pauses before each image is taken and waits for the user to press a key
-NUM_IMAGES = 10  # number of images to grab
-# todo update save_directory to where you want images saved.
-# This hasn't been tested yet. Files may just save in folder with python script
-save_directory = Path(r'C:\Users\Npyle1\OneDrive - DJO LLC\Pictures\DIC\testing')
+def configure_camera(cam, acquisition_mode='Continuous', buffer_mode='NewestOnly'):
+    # Set acquisition mode to continuous
+    node_acquisition_mode = PySpin.CEnumerationPtr(cam.GetNodeMap().GetNode('AcquisitionMode'))
+    if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
+        logger.error('Unable to set acquisition mode to continuous (node retrieval; camera). Aborting... \n')
+        return False
+    node_acquisition_mode_continuous = node_acquisition_mode.GetEntryByName(acquisition_mode)
+    if not PySpin.IsAvailable(node_acquisition_mode_continuous) or not PySpin.IsReadable(
+            node_acquisition_mode_continuous):
+        logger.error(f'Unable to set acquisition mode to {acquisition_mode} (entry \'continuous\' retrieval). \
+        Aborting... \n')
+        return False
+    acquisition_mode_continuous = node_acquisition_mode_continuous.GetValue()
+    node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
+    logger.info(f'Camera acquisition mode set to {acquisition_mode}...')
+    # Set StreamBuferHandlingMode to NewestOnly
+    s_node_map = cam.GetTLStreamNodeMap()
+    node_buffer_handling_mode = PySpin.CEnumerationPtr(s_node_map.GetNode('StreamBufferHandlingMode'))
+    if not PySpin.IsAvailable(node_buffer_handling_mode) or not PySpin.IsWritable(node_buffer_handling_mode):
+        logger.error('Unable to set buffer mode to newest only (node retrieval; camera). Aborting... \n')
+        return False
+    node_buffer_handling_mode_newest = node_buffer_handling_mode.GetEntryByName(buffer_mode)
+    if not PySpin.IsAvailable(node_buffer_handling_mode_newest) or not PySpin.IsReadable(
+            node_buffer_handling_mode_newest):
+        logger.error(f'Unable to set buffer mode to {buffer_mode} (entry \'continuous\' retrieval ). \
+        Aborting... \n')
+        return False
+    buffer_handling_newest = node_buffer_handling_mode_newest.GetValue()
+    node_buffer_handling_mode.SetIntValue(buffer_handling_newest)
+    logger.info(f'Camera buffer handling mode set to {buffer_mode}')
 
 
 def acquire_images(cam_list):
@@ -244,42 +264,13 @@ def acquire_images(cam_list):
         # *** NOTES ***
         # For pseudo-simultaneous streaming, each camera is prepared as if it
         # were just one, but in a loop. Notice that cameras are selected with
-        # an index. We demonstrate pseduo-simultaneous streaming because true
+        # an index. We demonstrate pseudo-simultaneous streaming because true
         # simultaneous streaming would require multiple process or threads,
         # which is too complex for an example.
         #
 
         for i, cam in enumerate(cam_list):
-
-            # Set acquisition mode to continuous
-            node_acquisition_mode = PySpin.CEnumerationPtr(cam.GetNodeMap().GetNode('AcquisitionMode'))
-            if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
-                logger.error('Unable to set acquisition mode to continuous (node retrieval; camera %d). Aborting... \n' % i)
-                return False
-            node_acquisition_mode_continuous = node_acquisition_mode.GetEntryByName('Continuous')
-            if not PySpin.IsAvailable(node_acquisition_mode_continuous) or not PySpin.IsReadable(
-                    node_acquisition_mode_continuous):
-                logger.error('Unable to set acquisition mode to continuous (entry \'continuous\' retrieval %d). \
-                Aborting... \n' % i)
-                return False
-            acquisition_mode_continuous = node_acquisition_mode_continuous.GetValue()
-            node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
-            logger.info('Camera %d acquisition mode set to continuous...' % i)
-            # Set StreamBuferHandlingMode to NewestOnly
-            s_node_map = cam.GetTLStreamNodeMap()
-            node_buffer_handling_mode = PySpin.CEnumerationPtr(s_node_map.GetNode('StreamBufferHandlingMode'))
-            if not PySpin.IsAvailable(node_buffer_handling_mode) or not PySpin.IsWritable(node_buffer_handling_mode):
-                logger.error('Unable to set buffer mode to newest only (node retrieval; camera %d). Aborting... \n' % i)
-                return False
-            node_buffer_handling_mode_newest = node_buffer_handling_mode.GetEntryByName('NewestOnly')
-            if not PySpin.IsAvailable(node_buffer_handling_mode_newest) or not PySpin.IsReadable(
-                    node_buffer_handling_mode_newest):
-                logger.error('Unable to set buffer mode to newest only (entry \'continuous\' retrieval %d). \
-                Aborting... \n' % i)
-                return False
-            buffer_handling_newest = node_buffer_handling_mode_newest.GetValue()
-            node_buffer_handling_mode.SetIntValue(buffer_handling_newest)
-            logger.info('Camera %d buffer handling mode set to newest only' % i)
+            configure_camera(cam)
             # set trigger to software trigger
             configure_trigger(cam)
             # todo set pixel format (mono8?)
@@ -532,7 +523,13 @@ def main():
     return result
 
 
+trigger_type = namedtuple('Triggers', 'software hardware')
+triggers = trigger_type(1, 2)
+selected_trigger = triggers.software
 if __name__ == '__main__':
+    # this script pauses before each image is taken and waits for the user to press a key
+    NUM_IMAGES = 10  # number of images to grab
+    save_directory = Path(r'C:\Users\Npyle1\OneDrive - DJO LLC\Pictures\DIC\testing')
     with working_directory(save_directory):
         if main():
             sys.exit(0)
